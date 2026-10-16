@@ -1,0 +1,25 @@
+name: Promote to prod
+on:
+  workflow_dispatch:
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    # Add required reviewers to the "production" environment in repo settings
+    # so every promotion needs a human approval.
+    environment: production
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main, fetch-depth: 0}
+      - name: Require a passing Demo CI run on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          result=$(gh run list --workflow "Demo CI" --commit "$sha" --json conclusion --jq '[.[] | select(.conclusion=="success")] | length')
+          [ "$result" -ge 1 ] || { echo "No successful Demo CI run for $sha"; exit 1; }
+      - name: Move the release branch to main
+        run: git push origin HEAD:refs/heads/release
