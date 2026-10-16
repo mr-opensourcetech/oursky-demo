@@ -1,0 +1,8 @@
+state/
+backups/
+node_modules/
+supabase-chat/node_modules/
+supabase-chat/supabase/.branches/
+supabase-chat/supabase/.temp/
+*.log
+.env

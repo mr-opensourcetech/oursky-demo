@@ -1,0 +1,56 @@
+name: Demo CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DEMO_ORIGIN: https://demo.example.test
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: bluesky-demo}
+      - uses: actions/checkout@v4
+        with: {repository: mr-opensourcetech/atproto, ref: main, path: atproto}
+      - uses: actions/checkout@v4
+        with: {repository: mr-opensourcetech/social-app, ref: demo/local-services, path: social-app}
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - name: Install system services
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql redis-server
+          sudo systemctl start postgresql redis-server
+          sudo -u postgres createuser -s "$USER"
+          createdb bluesky_demo
+      - name: Install and build dependencies
+        run: |
+          corepack enable
+          (cd atproto && pnpm install --frozen-lockfile && pnpm build)
+          (cd social-app && pnpm install --frozen-lockfile)
+      - name: Start Supabase for chat
+        working-directory: bluesky-demo/supabase-chat
+        run: |
+          npm ci
+          npx supabase start -x imgproxy,edge-runtime,logflare,vector,mailpit,storage-api,postgres-meta
+      - name: Start the demo
+        working-directory: bluesky-demo
+        env:
+          DB_POSTGRES_URL: postgresql:///bluesky_demo?host=/var/run/postgresql
+          ATPROTO_DIR: ${{ github.workspace }}/atproto
+          SOCIAL_APP_DIR: ${{ github.workspace }}/social-app
+        run: |
+          nohup bash start-backend.sh > backend.log 2>&1 &
+          nohup bash start-web.sh > web.log 2>&1 &
+          for i in $(seq 1 180); do curl -sf localhost:3000/demo/status | grep -q '"ready":true' && exit 0; sleep 2; done
+          cat backend.log; exit 1
+      - name: Smoke test
+        working-directory: bluesky-demo
+        run: node scripts/smoke-test.mjs
+      - name: Logs on failure
+        if: failure()
+        working-directory: bluesky-demo
+        run: tail -n 80 backend.log web.log || true
