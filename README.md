@@ -112,3 +112,12 @@ Verify a fresh sandbox from the saved image, not only this working machine.
   `dms-data.mjs` (direct messages), `portraits/` (profile images).
 - Direct messages: `chat.mjs` implements the chat API; its tables are the
   Supabase migration in `supabase-chat/supabase/migrations/`.
+
+## Shared environment
+
+The Replit environment runs two scripts from `scripts/`:
+
+- `env-build.sh` runs when the environment is built. It installs the system
+  packages, builds the Bluesky backend and app, and downloads the Supabase images.
+- `env-start.sh` runs every time the environment starts. It starts PostgreSQL,
+  Redis, Docker and Supabase, then the demo, using this sandbox's own address.
