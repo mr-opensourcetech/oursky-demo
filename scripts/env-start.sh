@@ -27,17 +27,13 @@ update_repo() {
   [ "$before" != "$after" ] && echo "Updated $dir to ${after:0:7}"
 }
 
-# dev follows the main branch of every repo. prod (DEMO_ENV=prod) follows only
-# the release branch of oursky-demo; the Bluesky app and backend stay as built.
-if [ "${DEMO_ENV:-dev}" != prod ]; then
-  if update_repo /root/atproto main; then
-    (cd /root/atproto && pnpm install --frozen-lockfile && pnpm build) || echo "atproto rebuild failed"
-  fi
-  if update_repo /root/social-app demo/local-services; then
-    (cd /root/social-app && pnpm install --frozen-lockfile) || echo "social-app install failed"
-  fi
+if update_repo /root/atproto main; then
+  (cd /root/atproto && pnpm install --frozen-lockfile && pnpm build) || echo "atproto rebuild failed"
 fi
-if update_repo "$DEMO_DIR" "${DEMO_BRANCH:-main}"; then
+if update_repo /root/social-app demo/local-services; then
+  (cd /root/social-app && pnpm install --frozen-lockfile) || echo "social-app install failed"
+fi
+if update_repo "$DEMO_DIR" main; then
   (cd "$DEMO_DIR/supabase-chat" && npm ci) || echo "supabase CLI install failed"
 fi
 
