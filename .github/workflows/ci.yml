@@ -5,6 +5,14 @@ on:
     branches: [main]
 
 jobs:
+  typos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crate-ci/typos@v1.51.1
+        with: {config: _typos.toml}
+
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 45

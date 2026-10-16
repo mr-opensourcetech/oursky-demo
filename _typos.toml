@@ -1,0 +1,17 @@
+# Spell-check our own writing (docs, scripts, code comments, UI text).
+# Historical posts, messages, usernames and images are intentionally excluded.
+[files]
+extend-exclude = [
+  "history-data.mjs",
+  "dms-data.mjs",
+  "portraits/",
+  "package-lock.json",
+  "supabase-chat/node_modules/",
+  "state/",
+  "backups/",
+]
+
+[default.extend-words]
+# Project terms that are correctly spelled
+atproto = "atproto"
+bsky = "bsky"
