@@ -112,3 +112,5 @@ Verify a fresh sandbox from the saved image, not only this working machine.
   `dms-data.mjs` (direct messages), `portraits/` (profile images).
 - Direct messages: `chat.mjs` implements the chat API; its tables are the
   Supabase migration in `supabase-chat/supabase/migrations/`.
+
+<!-- CI/CD test change -->
