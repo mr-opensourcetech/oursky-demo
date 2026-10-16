@@ -9,6 +9,34 @@ sandbox_id="${REPLIT_DOMAINS%%-00-*}"
 export DEMO_ORIGIN="${DEMO_ORIGIN:-https://bluesky--${sandbox_id//_/-}.${REPLIT_DOMAINS#*.}}"
 echo "Demo address: $DEMO_ORIGIN"
 
+# Pull the latest merged code so merged PRs show up on the next start.
+# A repo with uncommitted local changes is left alone.
+update_repo() {
+  local dir=$1 branch=$2 before after
+  if [ -n "$(git -C "$dir" status --porcelain --untracked-files=no)" ]; then
+    echo "$dir has local changes; using the code already here"
+    return 1
+  fi
+  before=$(git -C "$dir" rev-parse HEAD)
+  if ! git -C "$dir" fetch --depth 1 origin "$branch" 2>/dev/null; then
+    echo "Could not reach GitHub for $dir; using the code already here"
+    return 1
+  fi
+  git -C "$dir" reset --hard FETCH_HEAD > /dev/null
+  after=$(git -C "$dir" rev-parse HEAD)
+  [ "$before" != "$after" ] && echo "Updated $dir to ${after:0:7}"
+}
+
+if update_repo /root/atproto main; then
+  (cd /root/atproto && pnpm install --frozen-lockfile && pnpm build) || echo "atproto rebuild failed"
+fi
+if update_repo /root/social-app demo/local-services; then
+  (cd /root/social-app && pnpm install --frozen-lockfile) || echo "social-app install failed"
+fi
+if update_repo "$DEMO_DIR" main; then
+  (cd "$DEMO_DIR/supabase-chat" && npm ci) || echo "supabase CLI install failed"
+fi
+
 install -d -o postgres -g postgres -m 2775 /var/run/postgresql
 service postgresql start
 for _ in $(seq 1 30); do pg_isready -q && break; sleep 1; done
