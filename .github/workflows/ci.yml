@@ -5,6 +5,21 @@ on:
     branches: [main]
 
 jobs:
+  development-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - name: Check shell syntax
+        run: |
+          for script in scripts/*.sh start-backend.sh start-web.sh; do
+            bash -n "$script"
+          done
+      - name: Check startup and Git safety
+        run: node --test tests/development-safety.test.mjs
+
   typos:
     runs-on: ubuntu-latest
     timeout-minutes: 5

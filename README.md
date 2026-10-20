@@ -1,17 +1,30 @@
-# Bluesky sales-demo sandbox
+# Bluesky development environment
 
 This setup runs the real `bluesky-social/social-app` web client against
 the real AT Protocol development network in `bluesky-social/atproto`.
-It is a development fixture, not a production deployment or a public federation.
+It is the team's cloud development and integration-test fixture for an app
+intended for real users. Replit hosts development sandboxes; GitHub hosts source,
+pull requests, and CI. DigitalOcean production deployment is a separate setup,
+not implemented by these scripts.
 
-## Current source pins
+**Do not deploy this fixture backend for real users.** It recreates accounts
+and seeded data on restart and offers passwordless test-user impersonation.
+The runtime entry points reject `NODE_ENV=production` before starting services.
+This guard prevents an obvious configuration mistake; it is not authentication
+or a substitute for a production backend.
 
-- social-app: `e1fa8a3fcd3c668a386ae8e9afd1458ac44d810f`
-- atproto: `388dac9f7fdfa5ba8e4af08217b4afdc30d993ee`
-- Node: 24.22.0
-- social-app pnpm: 11.28.5
-- atproto pnpm: 11.11.0 (must also be first on PATH for nested build scripts)
-- PostgreSQL 18, Redis 8, compiler toolchain, fontconfig, and DejaVu fonts
+## Sources and toolchain
+
+- `mr-opensourcetech/oursky-demo`: `main`.
+- `mr-opensourcetech/social-app`: `demo/local-services`.
+- `mr-opensourcetech/atproto`: `main`.
+- Node 24 and each repository's Corepack/pnpm version.
+- PostgreSQL, Redis, Docker/Supabase, compiler toolchain, fontconfig, and DejaVu fonts.
+
+The environment build clones the configured branches and restores their full
+history. Builds track current branch tips, not immutable release pins.
+Startup runs the existing checkouts without fetching, resetting, switching
+branches, or installing dependencies. A restart never updates merged code.
 
 The frontend adaptations add `EXPO_PUBLIC_SERVICE_URL`
 configuration to local/default/public Bluesky API URLs and use the local
@@ -49,7 +62,7 @@ or authentic quotations.
 
 All 15 profile images are AI-generated artistic portraits. Optimized JPEGs
 live in `portraits/`; they are loaded and uploaded through the normal PDS API.
-Historical years appear in post text; database timestamps are recent demo
+Historical years are retained in the fixture source; database timestamps are recent demo
 activity so the feed remains useful. Profiles, the launcher, and the web UI
 disclose the historical-fiction and AI-image status.
 
@@ -73,8 +86,9 @@ endpoint; advanced unsupported filters report a clear limitation rather than
 being silently ignored.
 
 The AT Protocol test harness uses development identity/handle resolution and
-temporary PDS storage; it is not production federation. Direct messages,
-public search/feed generators, push notifications, and external embeds are not
+temporary PDS storage; it is not production federation. Direct messages use
+the local Supabase-backed chat service, not Bluesky's hosted chat service.
+Public feed generators, push notifications, and external embeds are not
 configured. The browser uses Bluesky's real read-only IP geolocation endpoint
 for the client's regional age-policy calculation; no social data is sent there.
 
@@ -91,14 +105,41 @@ Set `DEMO_ORIGIN` to the exact HTTPS sandbox endpoint origin (no path). Run
 If checkouts are not siblings of this directory, set `ATPROTO_DIR` and
 `SOCIAL_APP_DIR` explicitly. Open `/` once logs say `DEMO_READY`.
 
-## Saving this environment
+## Shared environment and individual sandboxes
 
-The current sandbox is working storage, not a saved environment definition.
-Before a reusable environment can be built, publish the demo scripts and
-frontend configuration change to an approved source repository. Do not patch
-source during an environment image build. Build images should prepare
-dependencies/compiled artifacts; startup should launch services and seed data.
-Verify a fresh sandbox from the saved image, not only this working machine.
+The workspace-scoped **Bluesky Demo** Development Environment is the shared
+build definition, not a shared working directory. Give each developer or task
+its own sandbox. Push work to a branch before discarding a sandbox; GitHub is
+the source of truth, and local sandbox state is not a backup.
+
+The saved definition intentionally has `repos: []`: its build commands clone
+the three public repositories directly. `scripts/env-build.sh` prepares tools,
+full Git history, dependencies, and compiled artifacts. `scripts/env-start.sh`
+starts services and seeds the disposable fixture.
+It waits for PostgreSQL and Docker readiness and retries Supabase's
+`StatusDbNotReadyError` up to 12 attempts when existing containers are still
+starting. Other Supabase failures stop startup immediately.
+
+After setup changes merge, rebuild the saved environment and verify a fresh
+sandbox. Existing sandboxes do not automatically receive the new build or
+startup fixes. Do not restart a sandbox with the old auto-reset startup script
+while it contains work you need to preserve.
+
+To update an existing checkout, inspect `git status`, commit or stash local
+work (including untracked files as needed), fetch the desired branch, then
+explicitly merge or rebase. On a clean base branch, use `git pull --ff-only`.
+After dependency changes, run `pnpm install --frozen-lockfile` in the affected
+source repository and `pnpm build` in `atproto`; use `npm ci` in `supabase-chat`
+for its lockfile changes. Stop affected services before updating their code.
+
+Older sandboxes with shallow history can run:
+
+```sh
+bash scripts/prepare-git-history.sh /root/bluesky-demo /root/social-app /root/atproto
+```
+
+This fetches history without switching branches or changing working files.
+Other remote branches can be fetched explicitly when needed.
 
 ## Team workflow
 
@@ -112,5 +153,28 @@ Verify a fresh sandbox from the saved image, not only this working machine.
   `dms-data.mjs` (direct messages), `portraits/` (profile images).
 - Direct messages: `chat.mjs` implements the chat API; its tables are the
   Supabase migration in `supabase-chat/supabase/migrations/`.
+- Run `node --test tests/development-safety.test.mjs` for startup, branch
+  preservation, full-history preparation, and production-refusal regression
+  checks. GitHub Actions runs these separately from the integration smoke test.
+
+## Production deployment boundary
+
+Production is for real users, not a hosted version of the seeded test network.
+Before configuring a deployment environment:
+
+- Choose production account ownership: existing public-network accounts versus
+  independently hosted accounts. The test identity directory is neither.
+- Replace `TestNetwork` and restart seeding with production services, persistent
+  account/blob storage, migrations, and tested backup/restore.
+- Remove the test-user login/account picker and session-reset helpers from
+  production. Use production authentication and authorization.
+- Build and serve the frontend for production instead of running Expo/Metro.
+- Decide how production messaging, moderation, abuse controls, and account
+  deletion operate; local fixture chat does not establish those guarantees.
+- Separate development, staging, and production databases and secrets. Deploy
+  tested, immutable revisions through GitHub CI/CD with health checks and rollback.
+
+Setting `NODE_ENV=production` does not convert this fixture into a production
+service; intentionally, it refuses to start.
 
 

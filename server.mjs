@@ -1,3 +1,4 @@
+import './scripts/assert-fixture.mjs'
 import http from 'node:http'
 import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
