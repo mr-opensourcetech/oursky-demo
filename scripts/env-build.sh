@@ -11,6 +11,11 @@ curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 apt-get install -y nodejs
 corepack enable
 
+# The environment spec uses shallow public clones to bootstrap. Retain full
+# history for the cloned branches so developers can inspect, rebase, and PR.
+bash /root/bluesky-demo/scripts/prepare-git-history.sh \
+  /root/bluesky-demo /root/social-app /root/atproto
+
 (cd /root/atproto && pnpm install --frozen-lockfile && pnpm build)
 (cd /root/social-app && pnpm install --frozen-lockfile)
 (cd /root/bluesky-demo/supabase-chat && npm ci)

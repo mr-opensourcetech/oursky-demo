@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 DEMO_DIR="$(cd "$(dirname "$0")" && pwd)"
+node "$DEMO_DIR/scripts/assert-fixture.mjs"
 cd "${SOCIAL_APP_DIR:-$DEMO_DIR/../social-app}"
 while [ ! -f "$DEMO_DIR/state/runtime.env" ]; do sleep 1; done
 set -a

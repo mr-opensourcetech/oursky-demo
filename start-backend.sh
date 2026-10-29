@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 DEMO_DIR="$(cd "$(dirname "$0")" && pwd)"
+node "$DEMO_DIR/scripts/assert-fixture.mjs"
 : "${DEMO_ORIGIN:?Set DEMO_ORIGIN to the sandbox HTTPS origin}"
 export DB_POSTGRES_URL="${DB_POSTGRES_URL:-postgresql:///bluesky_demo?host=/var/run/postgresql&user=root}"
 export REDIS_HOST="${REDIS_HOST:-127.0.0.1:6379}"
